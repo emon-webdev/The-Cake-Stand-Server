@@ -1,10 +1,13 @@
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const express = require('express')
 const app = express()
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
-
+// const { ObjectId } = require("mongodb");
+const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY);
 const cors = require('cors');
 const port = process.env.PORT || 5000;
+
 /* 
 theCakeStandDB
 user: cakeStandUser
@@ -12,7 +15,21 @@ pass: BVx7L9vWs0E2k2AS
 */
 // middleware
 app.use(cors())
+app.use(express.static("public"));
 app.use(express.json())
+
+
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.0aavw86.mongodb.net/?retryWrites=true&w=majority`;
+
+// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+const client = new MongoClient(uri, {
+    serverApi: {
+        version: ServerApiVersion.v1,
+        strict: true,
+        deprecationErrors: true,
+    }
+});
+
 
 const verifyJWT = (req, res, next) => {
     const authorization = req.headers.authorization;
@@ -32,17 +49,7 @@ const verifyJWT = (req, res, next) => {
 }
 
 
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.0aavw86.mongodb.net/?retryWrites=true&w=majority`;
 
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
-const client = new MongoClient(uri, {
-    serverApi: {
-        version: ServerApiVersion.v1,
-        strict: true,
-        deprecationErrors: true,
-    }
-});
 
 async function run() {
     try {
@@ -51,9 +58,10 @@ async function run() {
 
         const usersCollection = client.db("theCakeStandDB").collection("users");
         const menuCollection = client.db("theCakeStandDB").collection("menu");
+        const productReviewCollection = client.db("theCakeStandDB").collection("productReview");
         const reviewCollection = client.db("theCakeStandDB").collection("reviews");
         const cartCollection = client.db("theCakeStandDB").collection("carts");
-
+        const paymentCollection = client.db("theCakeStandDB").collection("payments");
 
 
         // jwt
@@ -118,7 +126,6 @@ async function run() {
 
         app.patch('/users/admin/:id', async (req, res) => {
             const id = req.params.id
-            console.log(id)
             const filter = { _id: new ObjectId(id) }
             const updateDoc = {
                 $set: {
@@ -134,6 +141,18 @@ async function run() {
             const result = await menuCollection.find().toArray()
             res.send(result)
         })
+
+
+        app.get('/menu/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: id };
+            const result = await menuCollection.findOne(query);
+            if (!result) {
+                return res.status(404)
+                    .json({ message: "Menu item not found" });
+            }
+            res.send(result);
+        });
 
         app.post('/menu', verifyJWT, verifyAdmin, async (req, res) => {
             const newItem = req.body
@@ -154,13 +173,25 @@ async function run() {
             const result = await reviewCollection.find().toArray()
             res.send(result)
         })
+        app.get("/review/:id", async (req, res) => {
+            try {
+                const id = req.params.id;
+                const query = { _id: new ObjectId(id) };
+                const result = await reviewCollection.findOne(query);
 
+                if (!result) {
+                    return res.status(404).json({ message: "Review not found" });
+                }
 
+                res.send(result);
+            } catch (error) {
+                res.status(500).json({ message: "Internal server error" });
+            }
+        });
         // cart collection apis
         // app.get('/carts', verifyJWT, async (req, res) => {
         app.get('/carts', verifyJWT, async (req, res) => {
             const email = req.query.email
-            console.log(email)
             if (!email) {
                 res.send([])
             }
@@ -176,7 +207,6 @@ async function run() {
         })
         app.post('/carts', async (req, res) => {
             const item = req.body
-            console.log(item)
             const result = await cartCollection.insertOne(item)
             res.send(result)
         })
@@ -188,10 +218,120 @@ async function run() {
             res.send(result)
         })
 
+        // product review
+        app.post('/product-review', async (req, res) => {
+            const review = req.body
+            const result = await productReviewCollection.insertOne(review)
+            res.send(result)
+        })
+        // get review
+        app.get('/product-review', async (req, res) => {
+            const result = await productReviewCollection.find().sort({ _id: -1 }).toArray();
+            res.send(result)
+        })
+
+        app.get('/product-review/:id', async (req, res) => {
+            const id = req.params.id;
+            console.log(id)
+            const query = { productId: id };
+            const result = await productReviewCollection.find(query).sort({ _id: -1 }).toArray();
+            console.log(result)
+            res.send(result)
+        })
+
+        // Stripe payment
+        //create payment intent
+
+        app.post("/create-payment-intent", verifyJWT, async (req, res) => {
+            const { price } = req.body;
+            const amount = parseInt(price * 100);
+            // Create a PaymentIntent with the order amount and currency
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: "usd",
+                payment_method_types: ['card']
+            });
+            res.send({
+                clientSecret: paymentIntent.client_secret,
+            });
+        });
+
+
+        // payment related api
+        app.post('/payments', verifyJWT, async (req, res) => {
+            const payment = req.body;
+            const insertResult = await paymentCollection.insertOne(payment);
+
+            const query = { _id: { $in: payment.cartItems.map(id => new ObjectId(id)) } }
+            const deleteResult = await cartCollection.deleteMany(query)
+
+            res.send({ insertResult, deleteResult });
+        })
+
+        app.get('/admin-stats', verifyJWT, verifyAdmin, async (req, res) => {
+            const users = await usersCollection.estimatedDocumentCount();
+            const products = await menuCollection.estimatedDocumentCount()
+            const orders = await paymentCollection.estimatedDocumentCount()
+            const payments = await paymentCollection.find().toArray()
+            const revenue = payments.reduce((sum, payment) => sum + payment.price, 0)
+            //best way to get sum of a field is to use group and sum operator
+            res.send({
+                users,
+                products,
+                orders,
+                revenue
+            })
+        })
+
+        /* 
+        0. Bangla system (second best solution)
+        1. load all payments 
+        2. for each payment , get menuitems array
+        3. for each item in the menuitems  array get the menuItem from the menuCollection
+        4. put them in an array: allOrderedItems
+        5. separate allOrderedItems by category using filter
+        6. now get the quantity by using length: pizzas.lenght
+        7. for each category use reduce to get the total amount spent on this category
+        */
+
+        app.get('/orders-stats', async (req, res) => {
+            const pipeline = [
+                {
+                    $lookup: {
+                        from: 'menu',
+                        localField: 'menuItems',
+                        foreignField: '_id',
+                        as: 'menuItemsData'
+                    }
+                },
+                {
+                    $unwind: '$menuItemsData'
+                },
+                {
+                    $group: {
+                        _id: '$menuItemsData.category',
+                        count: { $sum: 1 },
+                        total: { $sum: '$menuItemsData.price' }
+                    }
+                },
+                {
+                    $project: {
+                        category: '$_id',
+                        count: 1,
+                        total: { $round: ['$total', 2] },
+                        _id: 0
+                    }
+                }
+            ];
+
+            const result = await paymentCollection.aggregate(pipeline).toArray()
+            res.send(result)
+        })
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
+
     } finally {
         // Ensures that the client will close when you finish/error
         // await client.close();
@@ -202,8 +342,9 @@ run().catch(console.dir);
 
 
 
+
 app.get('/', (req, res) => {
-    res.send('The cake stand in running')
+    res.send('The cake stand in running v1')
 })
 
 app.listen(port, () => {
@@ -245,3 +386,12 @@ naming convention
 
 
 
+/* 
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/",
+      "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+    }
+  ]
+*/
