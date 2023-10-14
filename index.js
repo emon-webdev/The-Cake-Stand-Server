@@ -54,7 +54,7 @@ const verifyJWT = (req, res, next) => {
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
+        // await client.connect();
 
         const usersCollection = client.db("theCakeStandDB").collection("users");
         const menuCollection = client.db("theCakeStandDB").collection("menu");
@@ -268,7 +268,7 @@ async function run() {
             res.send({ insertResult, deleteResult });
         })
 
-        app.get('/admin-stats', verifyJWT, verifyAdmin, async (req, res) => {
+        app.get('/admin-stats', async (req, res) => {
             const users = await usersCollection.estimatedDocumentCount();
             const products = await menuCollection.estimatedDocumentCount()
             const orders = await paymentCollection.estimatedDocumentCount()
@@ -282,6 +282,24 @@ async function run() {
                 revenue
             })
         })
+
+        // get all products (for my products)
+        //    `https://car-showroom-server.vercel.app/products?email=${user?.email}`
+        app.get("/user-stats", async (req, res) => {
+            const email = req.query.email;
+            const query = { email: email };
+            const products = await reviewCollection.find(query).toArray();
+            const productsCount = await reviewCollection.estimatedDocumentCount()
+            const bookings = await cartCollection.find(query).toArray();
+            const bookingsCount = await cartCollection.estimatedDocumentCount()
+            const orders = await paymentCollection.find(query).toArray();
+            const ordersCount = await paymentCollection.estimatedDocumentCount()
+            res.send({
+                products, productsCount,
+                bookings, bookingsCount,
+                orders, ordersCount,
+            });
+        });
 
         /* 
         0. Bangla system (second best solution)
@@ -341,10 +359,8 @@ run().catch(console.dir);
 
 
 
-
-
 app.get('/', (req, res) => {
-    res.send('The cake stand in running v1')
+    res.send('The cake stand in running v2')
 })
 
 app.listen(port, () => {
@@ -352,7 +368,7 @@ app.listen(port, () => {
 })
 
 
-
+module.exports = app
 
 
 
