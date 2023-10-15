@@ -169,8 +169,14 @@ async function run() {
 
 
         // review collection
+        app.post('/review', async (req, res) => {
+            const newReview = req.body
+            console.log(newReview)
+            const result = await reviewCollection.insertOne(newReview)
+            res.send(result)
+        })
         app.get('/review', async (req, res) => {
-            const result = await reviewCollection.find().toArray()
+            const result = await reviewCollection.find().sort({ _id: -1 }).toArray()
             res.send(result)
         })
         app.get("/review/:id", async (req, res) => {
@@ -232,10 +238,8 @@ async function run() {
 
         app.get('/product-review/:id', async (req, res) => {
             const id = req.params.id;
-            console.log(id)
             const query = { productId: id };
             const result = await productReviewCollection.find(query).sort({ _id: -1 }).toArray();
-            console.log(result)
             res.send(result)
         })
 
@@ -287,17 +291,15 @@ async function run() {
         //    `https://car-showroom-server.vercel.app/products?email=${user?.email}`
         app.get("/user-stats", async (req, res) => {
             const email = req.query.email;
+            console.log(email)
             const query = { email: email };
-            const products = await reviewCollection.find(query).toArray();
-            const productsCount = await reviewCollection.estimatedDocumentCount()
-            const bookings = await cartCollection.find(query).toArray();
-            const bookingsCount = await cartCollection.estimatedDocumentCount()
-            const orders = await paymentCollection.find(query).toArray();
-            const ordersCount = await paymentCollection.estimatedDocumentCount()
+            const reviews = await reviewCollection.find(query).sort({ _id: -1 }).toArray();
+            const bookings = await cartCollection.find(query).sort({ _id: -1 }).toArray();
+            const payments = await paymentCollection.find(query).sort({ _id: -1 }).toArray();
             res.send({
-                products, productsCount,
-                bookings, bookingsCount,
-                orders, ordersCount,
+                reviews,
+                bookings,
+                payments,
             });
         });
 
