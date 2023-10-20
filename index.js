@@ -1,6 +1,7 @@
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const express = require('express')
 const app = express()
+const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 // const { ObjectId } = require("mongodb");
@@ -18,8 +19,12 @@ app.use(cors())
 app.use(express.static("public"));
 app.use(express.json())
 
+// mongoose.connect(process.env.DATABASE_LOCAL).then(() => {
+//     console.log('Database connection is successful with mongoose')
+// });
+// const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.0aavw86.mongodb.net/?retryWrites=true&w=majority`;
+const uri = `${process.env.DATABASE}`;
 
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.0aavw86.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -50,7 +55,6 @@ const verifyJWT = (req, res, next) => {
 
 
 
-
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
@@ -62,6 +66,7 @@ async function run() {
         const reviewCollection = client.db("theCakeStandDB").collection("reviews");
         const cartCollection = client.db("theCakeStandDB").collection("carts");
         const paymentCollection = client.db("theCakeStandDB").collection("payments");
+        const reservationCollection = client.db("theCakeStandDB").collection("reservation");
 
 
         // jwt
@@ -243,6 +248,25 @@ async function run() {
             res.send(result)
         })
 
+        // Reservation
+        app.post('/reservation', async (req, res) => {
+            const newReservation = req.body
+            console.log(newReservation)
+            const result = await reservationCollection.insertOne(newReservation)
+            res.send(result)
+        })
+
+        app.get('/reservation', async (req, res) => {
+            const email = req.query.email
+            const query = { email: email }
+            const result = await reservationCollection.find(query).toArray();
+            res.send(result)
+        })
+        app.get('/all-reservation', async (req, res) => {
+            const result = await reservationCollection.find().toArray();
+            res.send(result)
+        })
+
         // Stripe payment
         //create payment intent
 
@@ -296,10 +320,12 @@ async function run() {
             const reviews = await reviewCollection.find(query).sort({ _id: -1 }).toArray();
             const bookings = await cartCollection.find(query).sort({ _id: -1 }).toArray();
             const payments = await paymentCollection.find(query).sort({ _id: -1 }).toArray();
+            const reservation = await reservationCollection.find(query).toArray();
             res.send({
                 reviews,
                 bookings,
                 payments,
+                reservation
             });
         });
 
