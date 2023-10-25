@@ -1,10 +1,11 @@
 const mongoose = require('mongoose');
 
 //menu schema design
-const menuSchema = mongoose.Schema({
+const productSchema = mongoose.Schema({
     name: {
         type: String,
         trim: true,
+        lowercase: true,
         // unique:true
     },
     recipe: String,
@@ -13,20 +14,23 @@ const menuSchema = mongoose.Schema({
     },
     image: {
         type: String,
-        // required: true
+        required: true
     },
-    category: String,
+    category: {
+        type: String,
+        required: true
+    },
     price: {
         type: Number,
-        // required: true,
+        required: true,
         min: [0, "Price Can't be negative"]
     },
     unit: {
         type: String,
         // required: true,
         enum: {
-            values: ['kg', 'litre', 'pcs'],
-            message: 'Unit value can"t be {value}, must be kg/litre/pcs '
+            values: ['kg', 'litre', 'pcs', 'bag', 'pound'],
+            message: 'Unit value can"t be {value}, must be kg/litre/pcs/bag/pound  '
         }
     },
     quantity: {
@@ -53,33 +57,12 @@ const menuSchema = mongoose.Schema({
             message: "status can't be {VALUE} "
         },
 
-    },
-    // supplier: {
-    //     type: mongoose.Schema.Types.ObjectId,
-    //     ref: "supplier"
-    // },
-    // categories: [{
-    //     name: {
-    //         type: String,
-    //         // required:true
-    //     },
-    //     _id: mongoose.Schema.Types.ObjectId,
-    // }]
-
-    // createdAt: {
-    //     type: Date,
-    //     default: Date.now,
-    // },
-    // updatedAt: {
-    //     type: Date,
-    //     default: Date.now
-    // }
-
+    }
 }, {
     timestamps: true,
 });
 
 //menu model design
-const Menu = mongoose.model('Menu', menuSchema)
+const Product = mongoose.model('Product', productSchema)
 
-module.exports = Menu
+module.exports = Product

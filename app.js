@@ -14,18 +14,26 @@ app.use(express.static("public"));
 1. Schema => Model => query
 */
 
-const menuRoute = require('./src/menu/menu.routes')
-
-//menu routes
 //posting to database
-app.use('/api/v1/menu', menuRoute)
-
-
-
+//require routes
+const productRoute = require('./src/product/product.routes')
+const cartRoute = require('./src/cart/cart.routes')
+const userRoute = require('./src/user/user.routes')
+const reviewsRoute = require('./src/reviews/reviews.routes')
 
 app.get('/', (req, res) => {
-    res.send('The Cake Stand Route is working v1 !!')
+    res.send('The Cake Stand App is working v1 !!')
 
 })
+// use route
+app.use('/api/v1/product', productRoute)
+app.use('/api/v1/cart', cartRoute)
+app.use('/api/v1/user', userRoute)
+app.use('/api/v1/review', reviewsRoute)
+
+
+
+
+
 
 module.exports = app
