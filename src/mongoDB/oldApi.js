@@ -1,21 +1,31 @@
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const express = require('express')
 const app = express()
-const cors = require('cors')
-
 const mongoose = require('mongoose');
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
+// const { ObjectId } = require("mongodb");
 const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY);
+const cors = require('cors');
+const port = process.env.PORT || 5000;
 
-
+/* 
+theCakeStandDB
+user: cakeStandUser
+pass: BVx7L9vWs0E2k2AS
+*/
 // middleware
 app.use(cors())
-app.use(express.json())
 app.use(express.static("public"));
+app.use(express.json())
 
-// old code 
+// mongoose.connect(process.env.DATABASE_LOCAL).then(() => {
+//     console.log('Database connection is successful with mongoose')
+// });
+// const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.0aavw86.mongodb.net/?retryWrites=true&w=majority`;
 const uri = `${process.env.DATABASE}`;
+
+
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
     serverApi: {
@@ -25,8 +35,23 @@ const client = new MongoClient(uri, {
     }
 });
 
-// call middlewares
-const { verifyJWT, verifyAdmin } = require('./middlewares.js');
+
+const verifyJWT = (req, res, next) => {
+    const authorization = req.headers.authorization;
+    if (!authorization) {
+        return res.status(401).send({ error: true, message: 'unauthorized access' });
+    }
+    // bearer token
+    const token = authorization.split(' ')[1];
+
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(401).send({ error: true, message: 'unauthorized access' })
+        }
+        req.decoded = decoded;
+        next();
+    })
+}
 
 
 
@@ -53,15 +78,15 @@ async function run() {
 
         //Warning : use verifyJWT before using verifyAdmin
         // verify admin middleware
-        // const verifyAdmin = async (req, res, next) => {
-        //     const email = req.decoded.email
-        //     const query = { email: email }
-        //     const user = await usersCollection.findOne(query)
-        //     if (user?.role !== 'admin') {
-        //         return res.status(403).send({ error: true, message: 'forbidden message' })
-        //     }
-        //     next()
-        // }
+        const verifyAdmin = async (req, res, next) => {
+            const email = req.decoded.email
+            const query = { email: email }
+            const user = await usersCollection.findOne(query)
+            if (user?.role !== 'admin') {
+                return res.status(403).send({ error: true, message: 'forbidden message' })
+            }
+            next()
+        }
 
         /* secure route
         0. do not show secure links to those who should not see the links
@@ -351,13 +376,66 @@ async function run() {
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
-        console.log("The Caka Stand Server successfully connected to MongoDB!");
+        console.log("Pinged your deployment. You successfully connected to MongoDB!");
 
     } finally {
         // Ensures that the client will close when you finish/error
         // await client.close();
     }
 }
-// run().catch(console.dir);
+run().catch(console.dir);
 
-module.exports = run;
+
+
+app.get('/', (req, res) => {
+    res.send('The cake stand in running v2')
+})
+
+app.listen(port, () => {
+    console.log(`The cake stand server in running on port ${port}`)
+})
+
+
+module.exports = app
+
+
+
+
+
+/* 
+---------
+naming convention
+
+1. users: userCollection
+2. app.get('/users')
+2. app.get('/users/:id')
+2. app.post('/users')
+2. app.patch('/users/:id')
+2. app.put('/users/:id')
+2. app.delete('/users/:id')
+
+
+
+-----------
+
+
+*/
+
+
+
+
+
+
+
+
+
+
+/* 
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/",
+      "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+    }
+  ]
+*/
