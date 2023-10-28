@@ -23,7 +23,7 @@ app.use(express.json())
 //     console.log('Database connection is successful with mongoose')
 // });
 // const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.0aavw86.mongodb.net/?retryWrites=true&w=majority`;
-const uri = `${process.env.DATABASE}`;
+const uri = `${process.env.DATABASE_MONGODB}`;
 
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version

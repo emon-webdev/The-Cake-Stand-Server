@@ -1,13 +1,11 @@
 const express = require('express')
 const app = express()
 const cors = require('cors')
-
-const mongoose = require('mongoose');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY);
-
+const router = express.Router()
 
 // middleware
 app.use(cors())
@@ -15,8 +13,8 @@ app.use(express.json())
 app.use(express.static("public"));
 
 // old code 
-const uri = `${process.env.DATABASE}`;
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+const uri = `${process.env.DATABASE_MONGODB}`;
+
 const client = new MongoClient(uri, {
     serverApi: {
         version: ServerApiVersion.v1,
@@ -26,9 +24,23 @@ const client = new MongoClient(uri, {
 });
 
 // call middlewares
-const { verifyJWT, verifyAdmin } = require('./middlewares.js');
+// const { verifyJWT, verifyAdmin } = require('./src/middlewares/middlewares');
+const verifyJWT = (req, res, next) => {
+    const authorization = req.headers.authorization;
+    if (!authorization) {
+        return res.status(401).send({ error: true, message: 'unauthorized access' });
+    }
+    // bearer token
+    const token = authorization.split(' ')[1];
 
-
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(401).send({ error: true, message: 'unauthorized access' })
+        }
+        req.decoded = decoded;
+        next();
+    })
+}
 
 async function run() {
     try {
@@ -37,45 +49,36 @@ async function run() {
 
         const usersCollection = client.db("theCakeStandDB").collection("users");
         const menuCollection = client.db("theCakeStandDB").collection("menu");
+        const productsCollection = client.db("theCakeStandDB").collection("products");
         const productReviewCollection = client.db("theCakeStandDB").collection("productReview");
         const reviewCollection = client.db("theCakeStandDB").collection("reviews");
         const cartCollection = client.db("theCakeStandDB").collection("carts");
         const paymentCollection = client.db("theCakeStandDB").collection("payments");
         const reservationCollection = client.db("theCakeStandDB").collection("reservation");
 
-
         // jwt
-        app.post('/jwt', async (req, res) => {
+        router.post('/jwt', async (req, res) => {
             const user = req.body
             const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '9000d' })
             res.send({ token })
         })
+        const verifyAdmin = async (req, res, next) => {
+            const email = req.decoded.email
+            const query = { email: email }
+            const user = await usersCollection.findOne(query)
+            if (user?.role !== 'admin') {
+                return res.status(403).send({ error: true, message: 'forbidden message' })
+            }
+            next()
+        }
 
-        //Warning : use verifyJWT before using verifyAdmin
-        // verify admin middleware
-        // const verifyAdmin = async (req, res, next) => {
-        //     const email = req.decoded.email
-        //     const query = { email: email }
-        //     const user = await usersCollection.findOne(query)
-        //     if (user?.role !== 'admin') {
-        //         return res.status(403).send({ error: true, message: 'forbidden message' })
-        //     }
-        //     next()
-        // }
-
-        /* secure route
-        0. do not show secure links to those who should not see the links
-        1. user jwt token: verifyToken
-        2. use verifyAdmin middlewares
-        
-        */
         // users related apis
-        app.get('/users', verifyJWT, verifyAdmin, async (req, res) => {
+        router.get('/users', verifyJWT, verifyAdmin, async (req, res) => {
             const result = await usersCollection.find().toArray()
             res.send(result)
         })
 
-        app.post('/users', async (req, res) => {
+        router.post('/users', async (req, res) => {
             const user = req.body
             const query = { email: user.email }
             const existingUser = await usersCollection.findOne(query)
@@ -86,12 +89,7 @@ async function run() {
             res.send(result)
         })
 
-        /* security layer : 
-        1. verifyJWT
-        2. email same
-        3. check admin
-         */
-        app.get('/users/admin/:email', verifyJWT, async (req, res) => {
+        router.get('/users/admin/:email', verifyJWT, async (req, res) => {
             const email = req.params.email
 
             if (req.decoded.email !== email) {
@@ -104,7 +102,7 @@ async function run() {
             res.send(result)
         })
 
-        app.patch('/users/admin/:id', async (req, res) => {
+        router.patch('/users/admin/:id', async (req, res) => {
             const id = req.params.id
             const filter = { _id: new ObjectId(id) }
             const updateDoc = {
@@ -117,13 +115,12 @@ async function run() {
         })
 
         // menu related apis
-        app.get('/menu', async (req, res) => {
+        router.get('/menu', async (req, res) => {
             const result = await menuCollection.find().toArray()
             res.send(result)
         })
 
-
-        app.get('/menu/:id', async (req, res) => {
+        router.get('/menu/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: id };
             const result = await menuCollection.findOne(query);
@@ -134,32 +131,61 @@ async function run() {
             res.send(result);
         });
 
-        app.post('/menu', verifyJWT, verifyAdmin, async (req, res) => {
+        router.post('/menu', verifyJWT, verifyAdmin, async (req, res) => {
             const newItem = req.body
             const result = await menuCollection.insertOne(newItem)
             res.send(result)
         })
 
-        app.delete('/menu/:id', verifyJWT, verifyAdmin, async (req, res) => {
+        router.delete('/menu/:id', verifyJWT, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
             const result = await menuCollection.deleteOne(query)
             res.send(result)
         })
 
+        // product like menu
+        router.get('/products', async (req, res) => {
+            const result = await productsCollection.find().toArray()
+            res.send(result)
+        })
+
+        router.get('/products/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: id };
+            const result = await productsCollection.findOne(query);
+            if (!result) {
+                return res.status(404)
+                    .json({ message: "Menu item not found" });
+            }
+            res.send(result);
+        });
+
+        router.post('/products', async (req, res) => {
+            const newItem = req.body
+            const result = await productsCollection.insertOne(newItem)
+            res.send(result)
+        })
+
+        router.delete('/products/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await productsCollection.deleteOne(query)
+            res.send(result)
+        })
 
         // review collection
-        app.post('/review', async (req, res) => {
+        router.post('/review', async (req, res) => {
             const newReview = req.body
             console.log(newReview)
             const result = await reviewCollection.insertOne(newReview)
             res.send(result)
         })
-        app.get('/review', async (req, res) => {
+        router.get('/review', async (req, res) => {
             const result = await reviewCollection.find().sort({ _id: -1 }).toArray()
             res.send(result)
         })
-        app.get("/review/:id", async (req, res) => {
+        router.get("/review/:id", async (req, res) => {
             try {
                 const id = req.params.id;
                 const query = { _id: new ObjectId(id) };
@@ -175,8 +201,7 @@ async function run() {
             }
         });
         // cart collection apis
-        // app.get('/carts', verifyJWT, async (req, res) => {
-        app.get('/carts', verifyJWT, async (req, res) => {
+        router.get('/carts', verifyJWT, async (req, res) => {
             const email = req.query.email
             if (!email) {
                 res.send([])
@@ -191,13 +216,13 @@ async function run() {
             const result = await cartCollection.find(query).toArray();
             res.send(result)
         })
-        app.post('/carts', async (req, res) => {
+        router.post('/carts', async (req, res) => {
             const item = req.body
             const result = await cartCollection.insertOne(item)
             res.send(result)
         })
 
-        app.delete('/carts/:id', async (req, res) => {
+        router.delete('/carts/:id', async (req, res) => {
             const id = req.params.id
             const query = { _id: new ObjectId(id) }
             const result = await cartCollection.deleteOne(query)
@@ -205,18 +230,18 @@ async function run() {
         })
 
         // product review
-        app.post('/product-review', async (req, res) => {
+        router.post('/product-review', async (req, res) => {
             const review = req.body
             const result = await productReviewCollection.insertOne(review)
             res.send(result)
         })
         // get review
-        app.get('/product-review', async (req, res) => {
+        router.get('/product-review', async (req, res) => {
             const result = await productReviewCollection.find().sort({ _id: -1 }).toArray();
             res.send(result)
         })
 
-        app.get('/product-review/:id', async (req, res) => {
+        router.get('/product-review/:id', async (req, res) => {
             const id = req.params.id;
             const query = { productId: id };
             const result = await productReviewCollection.find(query).sort({ _id: -1 }).toArray();
@@ -224,28 +249,26 @@ async function run() {
         })
 
         // Reservation
-        app.post('/reservation', async (req, res) => {
+        router.post('/reservation', async (req, res) => {
             const newReservation = req.body
             console.log(newReservation)
             const result = await reservationCollection.insertOne(newReservation)
             res.send(result)
         })
 
-        app.get('/reservation', async (req, res) => {
+        router.get('/reservation', async (req, res) => {
             const email = req.query.email
             const query = { email: email }
             const result = await reservationCollection.find(query).toArray();
             res.send(result)
         })
-        app.get('/all-reservation', async (req, res) => {
+        router.get('/all-reservation', async (req, res) => {
             const result = await reservationCollection.find().toArray();
             res.send(result)
         })
 
         // Stripe payment
-        //create payment intent
-
-        app.post("/create-payment-intent", verifyJWT, async (req, res) => {
+        router.post("/create-payment-intent", verifyJWT, async (req, res) => {
             const { price } = req.body;
             const amount = parseInt(price * 100);
             // Create a PaymentIntent with the order amount and currency
@@ -261,7 +284,7 @@ async function run() {
 
 
         // payment related api
-        app.post('/payments', verifyJWT, async (req, res) => {
+        router.post('/payments', verifyJWT, async (req, res) => {
             const payment = req.body;
             const insertResult = await paymentCollection.insertOne(payment);
 
@@ -271,7 +294,7 @@ async function run() {
             res.send({ insertResult, deleteResult });
         })
 
-        app.get('/admin-stats', async (req, res) => {
+        router.get('/admin-stats', async (req, res) => {
             const users = await usersCollection.estimatedDocumentCount();
             const products = await menuCollection.estimatedDocumentCount()
             const orders = await paymentCollection.estimatedDocumentCount()
@@ -288,7 +311,7 @@ async function run() {
 
         // get all products (for my products)
         //    `https://car-showroom-server.vercel.app/products?email=${user?.email}`
-        app.get("/user-stats", async (req, res) => {
+        router.get("/user-stats", async (req, res) => {
             const email = req.query.email;
             console.log(email)
             const query = { email: email };
@@ -304,18 +327,7 @@ async function run() {
             });
         });
 
-        /* 
-        0. Bangla system (second best solution)
-        1. load all payments 
-        2. for each payment , get menuitems array
-        3. for each item in the menuitems  array get the menuItem from the menuCollection
-        4. put them in an array: allOrderedItems
-        5. separate allOrderedItems by category using filter
-        6. now get the quantity by using length: pizzas.lenght
-        7. for each category use reduce to get the total amount spent on this category
-        */
-
-        app.get('/orders-stats', async (req, res) => {
+        router.get('/orders-stats', async (req, res) => {
             const pipeline = [
                 {
                     $lookup: {
@@ -354,10 +366,8 @@ async function run() {
         console.log("The Caka Stand Server successfully connected to MongoDB!");
 
     } finally {
-        // Ensures that the client will close when you finish/error
         // await client.close();
     }
 }
-// run().catch(console.dir);
-
-module.exports = run;
+run().catch(console.dir);
+module.exports = router;

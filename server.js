@@ -1,16 +1,15 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv').config();
 const colors = require('colors')
-
 const app = require('./app.js')
 
-
 async function main() {
-    await mongoose.connect(process.env.DATABASE_LOCAL).then(() => {
-        console.log(`The Cake Stand App Database connection is successful`.red.bold)
+    await mongoose.connect(process.env.DATABASE).then(() => {
+        console.log(`The Cake Stand App Database connection is successful to Mongoose`.red.bold)
     });
 }
 main().catch(err => console.log(err));
+
 // server
 const port = process.env.PORT || 8080
 app.listen(port, () => {
