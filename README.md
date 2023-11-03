@@ -47,8 +47,8 @@ User Password: <user@gmail.com>
 Runs the app in the development mode.\
 Open [https://the-cake-stand.web.app/](https://the-cake-stand.web.app/) to view it in your browser.
 
-<img src="./src/assets/readme/home.png" alt="GitHub Banner" width="100%" height="auto">
-<img src="./src/assets/readme/admin.png" alt="GitHub Banner" width="100%" height="auto">
-<img src="./src/assets/readme/user.png" alt="GitHub Banner" width="100%" height="auto">
-<img src="./src/assets/readme/cart.png" alt="GitHub Banner" width="100%" height="auto">
-<img src="./src/assets/readme/all_user.png" alt="GitHub Banner" width="100%" height="auto">
+<img src="./src/assets/home.png" alt="GitHub Banner" width="100%" height="auto">
+<img src="./src/assets/admin.png" alt="GitHub Banner" width="100%" height="auto">
+<img src="./src/assets/user.png" alt="GitHub Banner" width="100%" height="auto">
+<img src="./src/assets/cart.png" alt="GitHub Banner" width="100%" height="auto">
+<img src="./src/assets/all_user.png" alt="GitHub Banner" width="100%" height="auto">
