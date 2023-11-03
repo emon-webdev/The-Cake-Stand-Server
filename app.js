@@ -26,7 +26,7 @@ app.use('/api/v1/review', reviewsRoute);
 
 // Root Route
 app.get('/', (req, res) => {
-    res.send('The Cake Stand App is working v-1.0 !!');
+    res.send('The Cake Stand App is working v-1.1 !!');
 });
 
 module.exports = app
