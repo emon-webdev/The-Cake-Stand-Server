@@ -34,14 +34,8 @@ https://car-showroom-520ff.web.app/
 Runs the app in the development mode.\
 Open [https://car-showroom-520ff.web.app/](https://car-showroom-520ff.web.app/) to view it in your browser.
 
-![Github Banner](assets/home.png)
-![Github Banner](assets/admin.png)
-![Github Banner](assets/user.png)
-![Github Banner](assets/cart.png)
-![Github Banner](assets/cart.png)
-![Github Banner](assets/all_user.png)
-<img src="./src/assets/home.png" alt="GitHub Banner" width="300" height="200">
-<img src="./src/assets/admin.png" alt="GitHub Banner" width="300" height="200">
-<img src="./src/assets/user.png" alt="GitHub Banner" width="300" height="200">
-<img src="./src/assets/cart.png" alt="GitHub Banner" width="300" height="200">
-<img src="./src/assets/all_user.png" alt="GitHub Banner" width="300" height="200">
+<img src="./src/assets/home.png" alt="GitHub Banner" width="100%" height="auto">
+<img src="./src/assets/admin.png" alt="GitHub Banner" width="100%" height="auto">
+<img src="./src/assets/user.png" alt="GitHub Banner" width="600" height="400">
+<img src="./src/assets/cart.png" alt="GitHub Banner" width="100%" height="auto">
+<img src="./src/assets/all_user.png" alt="GitHub Banner" width="100%" height="600">
