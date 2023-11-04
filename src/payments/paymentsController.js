@@ -73,7 +73,6 @@ exports.updatePayments = async (req, res, next) => {
         const { id } = req.params
         // const Payments= await Payments.findById(id);
         // const result = await result.set(req.body).save()
-        // console.log(result)
         const result = await Payments.updateOne(
             { _id: id },
             { $set: req.body },
@@ -98,9 +97,7 @@ exports.updatePayments = async (req, res, next) => {
 exports.deletePayments = async (req, res, next) => {
     try {
         const { id } = req.params
-        console.log(id)
         const result = await Payments.deleteOne({ _id: id })
-        console.log(result)
         res.status(200).json({
             status: 'success',
             message: 'Data successfully deleted',

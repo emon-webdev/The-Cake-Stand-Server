@@ -73,7 +73,6 @@ exports.updateReviews = async (req, res, next) => {
         const { id } = req.params
         // const Reviews = await Reviews.findById(id);
         // const result = await result.set(req.body).save()
-        // console.log(result)
         const result = await Cart.updateOne(
             { _id: id },
 
@@ -99,9 +98,7 @@ exports.updateReviews = async (req, res, next) => {
 exports.deleteReviews = async (req, res, next) => {
     try {
         const { id } = req.params
-        console.log(id)
         const result = await Reviews.deleteOne({ _id: id })
-        console.log(result)
         res.status(200).json({
             status: 'success',
             message: 'Data successfully deleted',

@@ -176,7 +176,6 @@ async function run() {
         // review collection
         app.post('/review', async (req, res) => {
             const newReview = req.body
-            console.log(newReview)
             const result = await reviewCollection.insertOne(newReview)
             res.send(result)
         })
@@ -251,7 +250,6 @@ async function run() {
         // Reservation
         app.post('/reservation', async (req, res) => {
             const newReservation = req.body
-            console.log(newReservation)
             const result = await reservationCollection.insertOne(newReservation)
             res.send(result)
         })
@@ -315,7 +313,6 @@ async function run() {
         //    `https://car-showroom-server.vercel.app/products?email=${user?.email}`
         app.get("/user-stats", async (req, res) => {
             const email = req.query.email;
-            console.log(email)
             const query = { email: email };
             const reviews = await reviewCollection.find(query).sort({ _id: -1 }).toArray();
             const bookings = await cartCollection.find(query).sort({ _id: -1 }).toArray();

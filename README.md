@@ -66,3 +66,7 @@ Open [https://the-cake-stand.web.app/](https://the-cake-stand.web.app/) to view 
 #### All User Page
 
 <img src="./src/assets/all_user.png" alt="GitHub Banner" width="100%" height="auto">
+
+#### Project folder structure
+
+<img src="./src/assets/emon_webdev.png" alt="GitHub Banner" width="100%" height="auto">

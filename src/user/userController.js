@@ -42,9 +42,7 @@ exports.getUser = async (req, res) => {
 exports.getUserById = async (req, res) => {
     try {
         const { id } = req.params
-        console.log(id)
         const User = await User.findOne({ _id: id })
-        console.log(User)
         res.status(200).json({
             status: 'success',
             message: 'get the data successfully',
@@ -67,7 +65,6 @@ exports.updateUser = async (req, res, next) => {
         const { id } = req.params
         // const menu = await Menu.findById(id);
         // const result = await result.set(req.body).save()
-        // console.log(result)
         const result = await User.updateOne(
             { _id: id },
             { $set: req.body },
@@ -92,9 +89,7 @@ exports.updateUser = async (req, res, next) => {
 exports.deleteUser = async (req, res, next) => {
     try {
         const { id } = req.params
-        console.log(id)
         const result = await Cart.deleteOne({ _id: id })
-        console.log(result)
         res.status(200).json({
             status: 'success',
             message: 'Data successfully deleted',

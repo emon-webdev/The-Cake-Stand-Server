@@ -73,7 +73,6 @@ exports.updateCart = async (req, res, next) => {
         const { id } = req.params
         // const menu = await Menu.findById(id);
         // const result = await result.set(req.body).save()
-        // console.log(result)
         const result = await Cart.updateOne(
             { _id: id },
 
@@ -99,9 +98,7 @@ exports.updateCart = async (req, res, next) => {
 exports.deleteCart = async (req, res, next) => {
     try {
         const { id } = req.params
-        console.log(id)
         const result = await Cart.deleteOne({ _id: id })
-        console.log(result)
         res.status(200).json({
             status: 'success',
             message: 'Data successfully deleted',
